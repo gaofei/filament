@@ -244,7 +244,7 @@ public class Manipulator {
     /**
      * Sets the viewport dimensions. The manipulator uses this processing grab events and raycasts.
      */
-    void setViewport(int width, int height) {
+    public void setViewport(int width, int height) {
         nSetViewport(mNativeObject, width, height);
     }
 
@@ -277,7 +277,7 @@ public class Manipulator {
      * @param y Y-coordinate for point of interest in viewport space
      * @param strafe ORBIT mode only; if true, starts a translation rather than a rotation.
      */
-    public void grabBegin(int x, int y, Boolean strafe) {
+    public void grabBegin(int x, int y, boolean strafe) {
         nGrabBegin(mNativeObject, x, y, strafe);
     }
 
@@ -356,7 +356,7 @@ public class Manipulator {
     private static native void nSetViewport(long nativeManip, int width, int height);
     private static native void nGetLookAt(long nativeManip, float[] eyePosition, float[] targetPosition, float[] upward);
     private static native void nRaycast(long nativeManip, int x, int y, float[] result);
-    private static native void nGrabBegin(long nativeManip, int x, int y, Boolean strafe);
+    private static native void nGrabBegin(long nativeManip, int x, int y, boolean strafe);
     private static native void nGrabUpdate(long nativeManip, int x, int y);
     private static native void nGrabEnd(long nativeManip);
     private static native void nZoom(long nativeManip, int x, int y, float scrolldelta);
