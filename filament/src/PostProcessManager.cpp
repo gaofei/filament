@@ -291,35 +291,39 @@ FrameGraphId<FrameGraphTexture> PostProcessManager::dynamicScaling(FrameGraph& f
         FrameGraphRenderTargetHandle drt;
     };
 
-    auto& ppBlitScaling = fg.addPass<PostProcessScaling>("blit scaling",
-            [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
-                auto const& inputDesc = fg.getDescriptor(input);
+    if (!useQuad) {
+        auto& ppBlitScaling = fg.addPass<PostProcessScaling>("blit scaling",
+                [&](FrameGraph::Builder& builder, PostProcessScaling& data) {
+                    auto const& inputDesc = fg.getDescriptor(input);
 
-                data.input = builder.read(input);
-                FrameGraphRenderTarget::Descriptor d;
-                d.attachments.color = { data.input };
-                data.srt = builder.createRenderTarget(builder.getName(data.input), d);
+                    data.input = builder.read(input);
+                    FrameGraphRenderTarget::Descriptor d;
+                    d.attachments.color = { data.input };
+                    data.srt = builder.createRenderTarget(builder.getName(data.input), d);
 
-                data.output = builder.createTexture("scaled output", {
-                        .width = inputDesc.width,
-                        .height = inputDesc.height,
-                        .format = outFormat
+                    data.output = builder.createTexture("scaled output", {
+                            .width = inputDesc.width,
+                            .height = inputDesc.height,
+                            .format = outFormat
+                    });
+                    data.drt = builder.createRenderTarget(data.output);
+                },
+                [=](FrameGraphPassResources const& resources,
+                        PostProcessScaling const& data, DriverApi& driver) {
+                    auto in = resources.getRenderTarget(data.srt);
+                    auto out = resources.getRenderTarget(data.drt);
+                    driver.blit(TargetBufferFlags::COLOR,
+                            out.target, out.params.viewport, in.target, in.params.viewport,
+                            SamplerMagFilter::LINEAR);
                 });
-                data.drt = builder.createRenderTarget(data.output);
-            },
-            [=](FrameGraphPassResources const& resources,
-                    PostProcessScaling const& data, DriverApi& driver) {
-                auto in = resources.getRenderTarget(data.srt);
-                auto out = resources.getRenderTarget(data.drt);
-                driver.blit(TargetBufferFlags::COLOR,
-                        out.target, out.params.viewport, in.target, in.params.viewport,
-                        SamplerMagFilter::LINEAR);
-            });
+        return ppBlitScaling.getData().output;
+    } else {
+        auto ppQuadScalingOutput = quadBlit(fg, blend, input, outFormat);
+        return ppQuadScalingOutput;
+    }
 
-    auto ppQuadScalingOutput = quadBlit(fg, blend, input, outFormat);
-
-    // we rely on automatic culling of unused render passes
-    return useQuad ? ppQuadScalingOutput : ppBlitScaling.getData().output;
+//    // we rely on automatic culling of unused render passes
+//    return useQuad ? ppQuadScalingOutput : ppBlitScaling.getData().output;
 }
 
 FrameGraphId<FrameGraphTexture> PostProcessManager::quadBlit(FrameGraph& fg,

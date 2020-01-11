@@ -434,16 +434,16 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
         input = colorPass(fg, config, opaquePass, clearFlags, view.getClearColor());
 
         // TODO: copy the color buffer into a texture, generate the mip-levels, feed the next pass
-        input = ppm.quadBlit(fg, false, input, fg.getDescriptor(input).format);
+        //input = ppm.quadBlit(fg, false, input, fg.getDescriptor(input).format);
 
-        fg.addPass<FrameGraph::Empty>("dummy",
-                [&](FrameGraph::Builder& builder, auto& data) {
-                    builder.sideEffect();
-                    builder.read(input);
-                },
-                [](FrameGraphPassResources const& resources, auto const& data,
-                        backend::DriverApi& driver) {
-                });
+//        fg.addPass<FrameGraph::Empty>("dummy",
+//                [&](FrameGraph::Builder& builder, auto& data) {
+//                    builder.sideEffect();
+//                    builder.read(input);
+//                },
+//                [](FrameGraphPassResources const& resources, auto const& data,
+//                        backend::DriverApi& driver) {
+//                });
 
         // set-up the refraction pass
         RenderPass translucentPass(pass);
@@ -454,6 +454,38 @@ FrameGraphId<FrameGraphTexture> FRenderer::refractionPass(FrameGraph& fg,
     } else {
         output = input;
     }
+
+    struct ResolveData {
+        FrameGraphId<FrameGraphTexture> output;
+        FrameGraphRenderTargetHandle srt;
+        FrameGraphRenderTargetHandle drt;
+    };
+
+//    auto& ppResolve = fg.addPass<ResolveData>("resolve",
+//            [&](FrameGraph::Builder& builder, auto& data) {
+//                auto inputDesc = fg.getDescriptor(output);
+//
+//                FrameGraphId<FrameGraphTexture> input = builder.read(output);
+//                FrameGraphRenderTarget::Descriptor d;
+//                d.attachments.color = { input };
+//                data.srt = builder.createRenderTarget(builder.getName(input), d);
+//
+//                inputDesc.width /= 16;
+//                inputDesc.height /= 16;
+//                data.output = builder.createTexture("resolved buffer", inputDesc);
+//                data.drt = builder.createRenderTarget(data.output);
+//            },
+//            [](FrameGraphPassResources const& resources, auto const& data, DriverApi& driver) {
+//                auto in = resources.getRenderTarget(data.srt);
+//                auto out = resources.getRenderTarget(data.drt);
+//                driver.blit(TargetBufferFlags::COLOR,
+//                        out.target, out.params.viewport, in.target, in.params.viewport,
+//                        SamplerMagFilter::NEAREST);
+//            });
+
+
+    //output = ppResolve.getData().output;
+    //output = ppm.dynamicScaling(fg, 0, false, false, output, config.hdrFormat);
 
     return output;
 }
@@ -487,7 +519,9 @@ FrameGraphId<FrameGraphTexture> FRenderer::colorPass(FrameGraph& fg,
                     data.color = builder.createTexture("Color Buffer",
                             { .width = config.svp.width,
                                     .height = config.svp.height,
-                                    .format = config.hdrFormat });
+                                    .format = config.hdrFormat,
+                                    //.samples = config.msaa
+                            });
                 }
 
                 if (!data.depth.isValid()) {
